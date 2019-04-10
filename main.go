@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
+	"log"
+	"os"
 	"regexp"
-	"runtime"
 	"strings"
 	"sync"
 )
@@ -30,7 +32,6 @@ func wordCounter() map[string]int {
 }
 
 func wordCounterConcurrent() map[string]int {
-	runtime.GOMAXPROCS(4) //Make sure we use all processors
 	b, _ := ioutil.ReadFile("input.txt")
 	inputText := string(b)
 	mostFrequent := make(map[string]int)
@@ -66,4 +67,37 @@ func wordCounterConcurrent() map[string]int {
 	wg.Wait()
 	doneChan <- true
 	return mostFrequent
+}
+
+func wordCounterStream() (words map[string]int) {
+	file, err := os.Open("input.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	words = make(map[string]int)
+
+	scanner := bufio.NewScanner(file)
+
+	// TODO we actually need to implement our own split function here since
+	// bufio.ScanWords includes symbols like commas
+	// split := func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	// 	return
+	// }
+
+	// Just use the default for now
+	scanner.Split(bufio.ScanWords)
+
+	for scanner.Scan() {
+		w := scanner.Text()
+		words[strings.ToLower(w)]++
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	// fmt.Println(words)
+	return
 }

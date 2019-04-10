@@ -15,3 +15,9 @@ func BenchmarkWordCounterConcurrent(b *testing.B) {
 		wordCounterConcurrent()
 	}
 }
+
+func BenchmarkWordCounterStreams(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		wordCounterStream()
+	}
+}
