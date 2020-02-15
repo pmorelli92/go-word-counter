@@ -5,13 +5,14 @@ Read more in my [blog](https://devandchill.com/posts/2019/04/word-counter-sync-o
 
 # Run
 
-    go test -bench=. --benchmem
-
-    goos: darwin
-    goarch: amd64
-    pkg: github.com/pmorelli92/go-word-counter
-    BenchmarkWordCounter-8             	     100	  17365420 ns/op	 2702199 B/op	  129059 allocs/op
-    BenchmarkWordCounterConcurrent-8   	      30	  52831085 ns/op	 7004061 B/op	  137706 allocs/op
-    BenchmarkWordCounterStreams-8      	     300	   5398546 ns/op	  426424 B/op	   50175 allocs/op
-    PASS
-    ok  	github.com/pmorelli92/go-word-counter	5.593s
+```
+goos: darwin
+goarch: amd64
+PASS
+benchmark                           iter     time/iter    bytes alloc             allocs
+---------                           ----     ---------    -----------             ------
+BenchmarkWordCounter-12               45   25.88 ms/op   4354027 B/op   124918 allocs/op
+BenchmarkWordCounterConcurrent-12     19   59.70 ms/op   5711640 B/op   138290 allocs/op
+BenchmarkWordCounterStreams-12       198    5.93 ms/op    330114 B/op    44844 allocs/op
+ok      _/Users/pabmor/some/go-word-counter     5.952s
+```

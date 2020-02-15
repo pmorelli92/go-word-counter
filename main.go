@@ -9,32 +9,43 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"unicode"
+	"unicode/utf8"
 )
 
 func main() {
-	fmt.Println(wordCounterConcurrent())
+	fmt.Println(wordCounterStream())
 }
 
-func wordCounter() map[string]int {
-	b, _ := ioutil.ReadFile("input.txt")
-	inputText := string(b)
-	mostFrequent := make(map[string]int)
+func wordCounter() (words map[string]int) {
+	b, err := ioutil.ReadFile("input.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	removeLineBreaks := regexp.MustCompile(`\r?\n`)
+	inputText := removeLineBreaks.ReplaceAllString(string(b)," ")
+	words = make(map[string]int)
 	removeSpecial := regexp.MustCompile(`(?m)[^a-z]`)
 
 	for _, w := range strings.Split(inputText, " ") {
 		w = strings.ToLower(w)
 		w = removeSpecial.ReplaceAllString(w, "")
-		//time.Sleep(200)
-		mostFrequent[w] = mostFrequent[w] + 1
+		if w != "" {
+			words[w]++
+		}
 	}
 
-	return mostFrequent
+	return
 }
 
-func wordCounterConcurrent() map[string]int {
-	b, _ := ioutil.ReadFile("input.txt")
-	inputText := string(b)
-	mostFrequent := make(map[string]int)
+func wordCounterConcurrent() (words map[string]int) {
+	b, err := ioutil.ReadFile("input.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	removeLineBreaks := regexp.MustCompile(`\r?\n`)
+	inputText := removeLineBreaks.ReplaceAllString(string(b)," ")
+	words = make(map[string]int)
 	removeSpecial := regexp.MustCompile(`(?m)[^a-z]`)
 
 	doneChan := make(chan bool)
@@ -44,7 +55,7 @@ func wordCounterConcurrent() map[string]int {
 		for {
 			select {
 			case w := <-wordsChan:
-				mostFrequent[w] = mostFrequent[w] + 1
+				words[w]++
 			case <-doneChan:
 				return
 			}
@@ -59,14 +70,15 @@ func wordCounterConcurrent() map[string]int {
 			defer wg.Done()
 			w1 = strings.ToLower(w1)
 			w1 = removeSpecial.ReplaceAllString(w1, "")
-			//time.Sleep(200)
-			wordsChan <- w1
+			if w1 != "" {
+				wordsChan <- w1
+			}
 		}(w)
 	}
 
 	wg.Wait()
 	doneChan <- true
-	return mostFrequent
+	return words
 }
 
 func wordCounterStream() (words map[string]int) {
@@ -77,27 +89,46 @@ func wordCounterStream() (words map[string]int) {
 	defer file.Close()
 
 	words = make(map[string]int)
-
 	scanner := bufio.NewScanner(file)
 
-	// TODO we actually need to implement our own split function here since
-	// bufio.ScanWords includes symbols like commas
-	// split := func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	// 	return
-	// }
-
-	// Just use the default for now
-	scanner.Split(bufio.ScanWords)
+	// bufio.ScanWords includes punctuation that we want to remove
+	// reimplemented that method checking with unicode.IsPunct
+	scanner.Split(ScanWords)
 
 	for scanner.Scan() {
 		w := scanner.Text()
-		words[strings.ToLower(w)]++
+		if w != "" {
+			words[strings.ToLower(w)]++
+		}
 	}
-
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
-
-	// fmt.Println(words)
 	return
+}
+
+func ScanWords(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	// Skip leading spaces.
+	start := 0
+	for width := 0; start < len(data); start += width {
+		var r rune
+		r, width = utf8.DecodeRune(data[start:])
+		if !unicode.IsSpace(r) || !unicode.IsPunct(r) {
+			break
+		}
+	}
+	// Scan until space, marking end of word.
+	for width, i := 0, start; i < len(data); i += width {
+		var r rune
+		r, width = utf8.DecodeRune(data[i:])
+		if unicode.IsSpace(r) || unicode.IsPunct(r) {
+			return i + width, data[start:i], nil
+		}
+	}
+	// If we're at EOF, we have a final, non-empty, non-terminated word. Return it.
+	if atEOF && len(data) > start {
+		return len(data), data[start:], nil
+	}
+	// Request more data.
+	return start, nil, nil
 }
