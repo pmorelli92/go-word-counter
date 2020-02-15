@@ -78,7 +78,7 @@ func wordCounterConcurrent() (words map[string]int) {
 
 	wg.Wait()
 	doneChan <- true
-	return words
+	return
 }
 
 func wordCounterStream() (words map[string]int) {
